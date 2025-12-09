@@ -1,0 +1,43 @@
+# 민감 정보
+*.key
+*.pem
+*.crt
+secrets/
+.env
+credentials.json
+
+# 임시 파일
+*.log
+*.tmp
+*.swp
+*~
+.DS_Store
+
+# IDE 설정
+.vscode/
+.idea/
+*.iml
+
+# Docker 관련
+.docker/
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Node
+node_modules/
+npm-debug.log
