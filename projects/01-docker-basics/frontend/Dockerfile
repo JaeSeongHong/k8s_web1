@@ -1,10 +1,11 @@
-# Nginx 기반 Frontend
+# Nginx 기반 Frontend - 최적화 버전
 FROM nginx:1.25-alpine
 
-# 보안: 불필요한 패키지 제거
-RUN apk --no-cache add curl
+# 필수 도구만 설치
+RUN apk add --no-cache curl && \
+    rm -rf /var/cache/apk/*
 
-# Custom Nginx 설정 복사
+# Nginx 설정 복사
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # HTML 파일 복사
@@ -18,8 +19,8 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost/health || exit 1
 
-# 포트 노출
 EXPOSE 80
 
-# Nginx 실행 (데몬 모드 off)
+STOPSIGNAL SIGQUIT
+
 CMD ["nginx", "-g", "daemon off;"]

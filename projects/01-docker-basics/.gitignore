@@ -1,0 +1,10 @@
+
+# 환경 설정 파일 (실제 비밀번호 포함)
+.env
+.env.local
+env/.env.*
+!env/.env.*.example
+
+# 백업 파일
+backups/*.sql
+backups/*.tar.gz
