@@ -1,0 +1,89 @@
+version: '3.8'
+
+# 실무 수준의 Docker Compose 설정
+
+services:
+  # Frontend: Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: devops-frontend
+    ports:
+      - "8080:80"  # Host:Container
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    labels:
+      - "com.devops.description=Frontend Nginx Server"
+      - "com.devops.tier=frontend"
+
+  # Backend: Python Flask API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: devops-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=database
+      - DB_NAME=devops_db
+      - DB_USER=devops_user
+      - DB_PASSWORD=devops_pass
+      - FLASK_ENV=production
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    labels:
+      - "com.devops.description=Backend Flask API"
+      - "com.devops.tier=backend"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Database: PostgreSQL
+  database:
+    image: postgres:16-alpine
+    container_name: devops-database
+    environment:
+      - POSTGRES_DB=devops_db
+      - POSTGRES_USER=devops_user
+      - POSTGRES_PASSWORD=devops_pass
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+    labels:
+      - "com.devops.description=PostgreSQL Database"
+      - "com.devops.tier=database"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devops_user -d devops_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# 네트워크 정의
+networks:
+  app-network:
+    driver: bridge
+    labels:
+      - "com.devops.description=Application Network"
+
+# 볼륨 정의
+volumes:
+  postgres-data:
+    driver: local
+    labels:
+      - "com.devops.description=PostgreSQL Data Volume"

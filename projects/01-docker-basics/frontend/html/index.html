@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps Learning - Docker 실습</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .visitor-count {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .count-number {
+            font-size: 4em;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+            margin: 10px 0;
+        }
+        
+        .count-label {
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .status {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-label {
+            color: #999;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .status-value.healthy {
+            color: #28a745;
+        }
+        
+        .status-value.error {
+            color: #dc3545;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐳 Docker 실습</h1>
+        <p class="subtitle">3-Tier 웹 애플리케이션 아키텍처</p>
+        
+        <div class="info-box">
+            <h3>📦 기술 스택</h3>
+            <p>
+                <strong>Frontend:</strong> Nginx + HTML/CSS/JavaScript<br>
+                <strong>Backend:</strong> Python Flask + Gunicorn<br>
+                <strong>Database:</strong> PostgreSQL 16<br>
+                <strong>Orchestration:</strong> Docker Compose
+            </p>
+        </div>
+        
+        <div class="visitor-count">
+            <div class="count-label">총 방문자 수</div>
+            <span id="visitorCount" class="count-number">
+                <span class="loading"></span>
+            </span>
+        </div>
+        
+        <button class="btn" onclick="incrementVisitor()">
+            🎯 방문자 카운트 증가
+        </button>
+        
+        <div class="status">
+            <div class="status-item">
+                <div class="status-label">Frontend</div>
+                <div class="status-value healthy" id="frontendStatus">✓ 정상</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Backend</div>
+                <div class="status-value" id="backendStatus">
+                    <span class="loading"></span>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Database</div>
+                <div class="status-value" id="databaseStatus">
+                    <span class="loading"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        
+        // 방문자 수 조회
+        async function fetchVisitorCount() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/visitors`);
+                if (!response.ok) throw new Error('API 응답 실패');
+                
+                const data = await response.json();
+                document.getElementById('visitorCount').textContent = data.visitors;
+                updateBackendStatus(true);
+                updateDatabaseStatus(true);
+            } catch (error) {
+                console.error('방문자 수 조회 실패:', error);
+                document.getElementById('visitorCount').textContent = 'ERROR';
+                updateBackendStatus(false);
+                updateDatabaseStatus(false);
+            }
+        }
+        
+        // 방문자 수 증가
+        async function incrementVisitor() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/visitors`, {
+                    method: 'POST'
+                });
+                if (!response.ok) throw new Error('API 응답 실패');
+                
+                const data = await response.json();
+                document.getElementById('visitorCount').textContent = data.visitors;
+                updateBackendStatus(true);
+                updateDatabaseStatus(true);
+            } catch (error) {
+                console.error('방문자 수 증가 실패:', error);
+                alert('방문자 카운트 증가 실패. 서버 상태를 확인하세요.');
+                updateBackendStatus(false);
+            }
+        }
+        
+        // 백엔드 상태 업데이트
+        function updateBackendStatus(isHealthy) {
+            const element = document.getElementById('backendStatus');
+            if (isHealthy) {
+                element.className = 'status-value healthy';
+                element.textContent = '✓ 정상';
+            } else {
+                element.className = 'status-value error';
+                element.textContent = '✗ 오류';
+            }
+        }
+        
+        // 데이터베이스 상태 업데이트
+        function updateDatabaseStatus(isHealthy) {
+            const element = document.getElementById('databaseStatus');
+            if (isHealthy) {
+                element.className = 'status-value healthy';
+                element.textContent = '✓ 정상';
+            } else {
+                element.className = 'status-value error';
+                element.textContent = '✗ 오류';
+            }
+        }
+        
+        // 페이지 로드 시 방문자 수 조회
+        window.onload = function() {
+            fetchVisitorCount();
+            // 10초마다 자동 갱신
+            setInterval(fetchVisitorCount, 10000);
+        };
+    </script>
+</body>
+</html>
